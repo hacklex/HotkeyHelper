@@ -15,7 +15,7 @@ namespace HotkeyHelper
         private const long MaxDoubleClickDelay = 200; //only do the camera moving for double-f2s within a 200ms time interval
         private const long MaxTickCount = 9000; //don't count ticks over9000 since we only require that for double-f2 recognition
         private const VirtualKeyShort RecordSeqKey = VirtualKeyShort.LCONTROL;
-
+        private const VirtualKeyShort CncBuildingKey = VirtualKeyShort.DIVIDE;
 
         static void Main()
         {
@@ -34,6 +34,24 @@ namespace HotkeyHelper
             }
             void Chord(VirtualKeyShort firstKey, VirtualKeyShort secondKey) { ButtonDown(firstKey); ButtonDown(secondKey); ButtonUp(secondKey); ButtonUp(firstKey); }
             void MouseClick() => mouse_event((int)(MouseEventFlags.LEFTDOWN | MouseEventFlags.LEFTUP), 0, 0, 0, 0);
+            void MoveMouseTo(int x, int y) => SetCursorPos(x, y);
+            void MouseDown() => mouse_event((int)(MouseEventFlags.LEFTDOWN), 0, 0, 0, 0);
+            void MouseUp() => mouse_event((int)(MouseEventFlags.LEFTUP), 0, 0, 0, 0);
+            void EvtMoveTo(int x, int y)
+            {
+                var nx = (x * 65535.0) / GetSystemMetrics(0);
+                var ny = (y * 65535.0) / GetSystemMetrics(1);
+                mouse_event(0x8001 | (int)(MOUSEEVENTF.LEFTUP), (int)nx, (int)ny, 0, 0);
+            }
+            void MoveMouseAndUpTo(int x, int y)
+            { 
+                var nx = (x * 65535.0) / GetSystemMetrics(0);
+                var ny = (y * 65535.0) / GetSystemMetrics(1);
+                MouseUp();
+                //mouse_event(0x8001 | (int)(MOUSEEVENTF.LEFTUP), (int)nx, (int)ny, 0, 0);
+                mouse_event(0x8001 | (int)(MOUSEEVENTF.LEFTUP), (int)nx, (int)ny, 0, 0);
+            }
+
             // working thread
             new Thread(new ParameterizedThreadStart(delegate //not that we ever needed any params
             {
@@ -43,10 +61,32 @@ namespace HotkeyHelper
                 long ticksWithoutF2 = 0; // if it's double-f2, we double the F2 in order to not lose the user's camera movement intention 
                 bool oldState = false;
                 Random r = new Random();
-                
+                bool oldBuildingKeyPressed = false;
+                int initBuildingPlacementMouseX = 0, initBuildingPlacementMouseY = 0;
 
                 while (!ThreadStopSignal) //we stop via ^C globally, or [Enter] in console
                 {
+                    if (IsKeyPressed(CncBuildingKey) && !oldBuildingKeyPressed)
+                    {
+                        GetCursorPos(out POINT pt);
+                        initBuildingPlacementMouseX = pt.X;
+                        initBuildingPlacementMouseY = pt.Y;
+                        oldBuildingKeyPressed = true;
+                    }
+                    if (!IsKeyPressed(CncBuildingKey) && oldBuildingKeyPressed)
+                    {
+                        oldBuildingKeyPressed = false;
+                        GetCursorPos(out POINT dest);
+                        MoveMouseTo(initBuildingPlacementMouseX, initBuildingPlacementMouseY);
+                        Thread.Sleep(10);
+                        MouseDown();
+                        Thread.Sleep(5);
+                        MoveMouseTo(dest.X, dest.Y);
+                        Thread.Sleep(5);
+                        MouseUp();
+                        //Timings are very important. These exact values are found by Tektaara.
+                    }
+
                     if (IsKeyPressed(VirtualKeyShort.SUBTRACT) && !oldState)
                     {
                         oldState = true;

@@ -17,11 +17,15 @@ namespace HotkeyHelper
         [DllImport("user32.dll")]
         public static extern void mouse_event(int dwFlags, int dx, int dy, int dwData, int dwExtraInfo);
 
+        [DllImport("user32.dll")]
+        static extern int GetSystemMetrics(int smIndex);
+
         [Flags]
         public enum MouseEventFlags : int
         {
             LEFTDOWN = 0x00000002,
-            LEFTUP = 0x00000004
+            LEFTUP = 0x00000004,
+            MOVE = 0x1
         }
         [StructLayout(LayoutKind.Sequential)]
         public struct INPUT
@@ -49,6 +53,19 @@ namespace HotkeyHelper
             KEYUP = 0x0002,
             SCANCODE = 0x0008,
             UNICODE = 0x0004
+        }
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool GetCursorPos(out POINT point);
+        [DllImport("user32.dll")]
+        static extern bool SetCursorPos(int X, int Y);
+
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct POINT
+        {
+            public Int32 X;
+            public Int32 Y;
         }
 
         internal enum VirtualKeyShort : short
